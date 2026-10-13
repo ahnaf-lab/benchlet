@@ -6,10 +6,11 @@ calls — against recorded fixture inputs. It tracks p50/p95/p99 latency and
 asserts regression thresholds in CI, and ships a terminal sparkline report
 so a slowdown shows up as a shape, not just a number.
 
-This milestone implements the core timer: a `benchmark()` call that runs a
-function against a set of fixture inputs and returns the raw per-call
-latency samples, measured with Node's built-in `perf_hooks`. Percentile
-calculation, regression assertions, and the sparkline reporter are not
+The core timer runs a function against a set of fixture inputs and returns
+the raw per-call latency samples, measured with Node's built-in
+`perf_hooks`. On top of that, `computeStats()` and `summarize()` turn raw
+samples into deterministic p50/p95/p99 percentiles, mean, and standard
+deviation. Regression assertions and the sparkline reporter are not
 implemented yet.
 
 ## Install
@@ -56,6 +57,28 @@ await benchmark(fn, { caseA: input1, caseB: input2 });
 
 `fn` may be synchronous or return a Promise; each call is awaited and timed
 individually.
+
+### Percentile stats
+
+`summarize()` attaches computed stats to each benchmark result, and
+`computeStats()` computes the same stats directly from a plain array of
+samples:
+
+```js
+const { benchmark, summarize } = require('benchlet');
+
+const results = await benchmark(handleToolCall, cases);
+const summarized = summarize(results);
+
+for (const { name, stats } of summarized) {
+  console.log(name, `p50=${stats.p50}ms p95=${stats.p95}ms p99=${stats.p99}ms`);
+}
+```
+
+`stats` is `{ count, min, max, mean, stddev, p50, p95, p99 }`. Percentiles
+use linear interpolation between ranked samples (the same method numpy and
+most statistics tools default to), so results are deterministic and
+reproducible for a given sample set regardless of input order.
 
 ## Status
 
