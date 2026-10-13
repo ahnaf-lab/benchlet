@@ -1,0 +1,24 @@
+{
+  "name": "benchlet",
+  "version": "0.1.0",
+  "description": "Micro-benchmark functions and tool handlers against recorded fixture inputs, with latency percentiles and a terminal sparkline report.",
+  "main": "index.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "files": [
+    "index.js",
+    "lib"
+  ],
+  "keywords": [
+    "benchmark",
+    "latency",
+    "performance",
+    "testing"
+  ],
+  "license": "MIT"
+}
