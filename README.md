@@ -12,8 +12,10 @@ the raw per-call latency samples, measured with Node's built-in
 samples into deterministic p50/p95/p99 percentiles, mean, and standard
 deviation. A local JSON baseline store (`saveBaseline()` / `loadBaseline()`)
 persists those stats per named benchmark and `compareToBaseline()` computes
-the delta against the last recorded run. Regression assertions and the
-sparkline reporter are not implemented yet.
+the delta against the last recorded run. `expectBenchmark()` ties the timer,
+stats, and baseline store together into a single CI-friendly assertion:
+it throws a readable `RegressionError` when latency regresses past a
+threshold. The sparkline reporter is not implemented yet.
 
 ## Install
 
@@ -116,6 +118,38 @@ percent }` — `diffStats()` exposes this same comparison directly on two
 stats objects, without touching the file system. The baseline file stores
 one JSON object keyed by benchmark name, so multiple named benchmarks can
 share a single file; writing a baseline only updates its own entry.
+
+### Assertion API
+
+`expectBenchmark()` runs the benchmark and returns an object with
+`toRegressNoMoreThan(pct)`, which checks each case's current stats against
+its recorded baseline and throws when the regression exceeds `pct` percent:
+
+```js
+const { expectBenchmark } = require('benchlet');
+
+await expectBenchmark(handleToolCall, cases, { warmup: 10, iterations: 100 }).toRegressNoMoreThan(10, {
+  baselineFile: '.benchlet-baseline.json',
+  name: 'handleToolCall',
+  metric: 'p95', // defaults to p95; also accepts min, max, mean, stddev, p50, p99
+});
+```
+
+A case with no recorded baseline yet is never failed — its current stats
+are saved as the new baseline, so the first run in a fresh checkout always
+succeeds and establishes the numbers future runs are checked against.
+Otherwise, once the chosen `metric` regresses by more than `pct` percent
+versus the baseline, the call throws a `RegressionError` whose message is a
+readable diff per failing case, e.g.:
+
+```
+Regression check failed for "handleToolCall":
+  case "short-prompt" p95 regressed 42.3% (baseline 1.200ms -> current 1.708ms), exceeds threshold 10%
+```
+
+`RegressionError#diff` carries the same information as structured data —
+an array of `{ case, status, metric, current, baseline, percent, threshold }`
+entries, one per case — for custom reporting.
 
 ## Status
 

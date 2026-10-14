@@ -3,6 +3,7 @@
 const { benchmark } = require('./lib/benchmark');
 const { computeStats, summarize, percentile } = require('./lib/stats');
 const { loadBaseline, saveBaseline, diffStats, compareToBaseline } = require('./lib/baseline');
+const { expectBenchmark, RegressionError } = require('./lib/expect');
 
 module.exports = {
   benchmark,
@@ -13,4 +14,6 @@ module.exports = {
   saveBaseline,
   diffStats,
   compareToBaseline,
+  expectBenchmark,
+  RegressionError,
 };
