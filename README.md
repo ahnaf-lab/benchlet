@@ -15,7 +15,9 @@ persists those stats per named benchmark and `compareToBaseline()` computes
 the delta against the last recorded run. `expectBenchmark()` ties the timer,
 stats, and baseline store together into a single CI-friendly assertion:
 it throws a readable `RegressionError` when latency regresses past a
-threshold. The sparkline reporter is not implemented yet.
+threshold. Finally, the `benchlet` CLI renders recorded percentile history
+as a terminal sparkline, so a slowdown shows up as a shape, not just a
+number.
 
 ## Install
 
@@ -150,6 +152,41 @@ Regression check failed for "handleToolCall":
 `RegressionError#diff` carries the same information as structured data —
 an array of `{ case, status, metric, current, baseline, percent, threshold }`
 entries, one per case — for custom reporting.
+
+### Sparkline reporter
+
+Pass a `historyFile` to `toRegressNoMoreThan()` to record every run's stats
+as a time series, in addition to the single-snapshot baseline:
+
+```js
+await expectBenchmark(handleToolCall, cases, { warmup: 10, iterations: 100 }).toRegressNoMoreThan(10, {
+  baselineFile: '.benchlet-baseline.json',
+  historyFile: '.benchlet-history.json',
+  name: 'handleToolCall',
+});
+```
+
+`historyFile` is off by default, so an assertion run never writes files you
+didn't ask for; recording is opt-in per call. Each case's stats are appended
+(even on a regressed run, so the trend stays visible), and the series is
+kept to the 50 most recent entries per name.
+
+Then run the bundled CLI to render that history as a terminal sparkline:
+
+```bash
+npx benchlet --file .benchlet-history.json --metric p95
+```
+
+```
+handleToolCall:short-prompt  ▁▂▂▃▄▅▇█  p95 latest=7.997ms min=0.003ms max=7.997ms (n=8)
+```
+
+Each case is scaled independently between its own recorded min and max, so
+the shape always shows relative movement regardless of the metric's units.
+`--metric` accepts any of `min`, `max`, `mean`, `stddev`, `p50`, `p95`, `p99`
+(default `p95`); `--name` filters to a single recorded benchmark/case; `--help`
+lists all options. `renderSparkline(values)`, `appendHistory()`, and
+`loadHistory()` are also exported directly for custom reporting.
 
 ## Status
 

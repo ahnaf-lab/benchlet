@@ -4,6 +4,9 @@
   "description": "Micro-benchmark functions and tool handlers against recorded fixture inputs, with latency percentiles and a terminal sparkline report.",
   "main": "index.js",
   "type": "commonjs",
+  "bin": {
+    "benchlet": "bin/benchlet.js"
+  },
   "engines": {
     "node": ">=18"
   },
@@ -12,7 +15,8 @@
   },
   "files": [
     "index.js",
-    "lib"
+    "lib",
+    "bin"
   ],
   "keywords": [
     "benchmark",
