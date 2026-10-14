@@ -10,8 +10,10 @@ The core timer runs a function against a set of fixture inputs and returns
 the raw per-call latency samples, measured with Node's built-in
 `perf_hooks`. On top of that, `computeStats()` and `summarize()` turn raw
 samples into deterministic p50/p95/p99 percentiles, mean, and standard
-deviation. Regression assertions and the sparkline reporter are not
-implemented yet.
+deviation. A local JSON baseline store (`saveBaseline()` / `loadBaseline()`)
+persists those stats per named benchmark and `compareToBaseline()` computes
+the delta against the last recorded run. Regression assertions and the
+sparkline reporter are not implemented yet.
 
 ## Install
 
@@ -79,6 +81,41 @@ for (const { name, stats } of summarized) {
 use linear interpolation between ranked samples (the same method numpy and
 most statistics tools default to), so results are deterministic and
 reproducible for a given sample set regardless of input order.
+
+### Baseline store
+
+`saveBaseline()` and `loadBaseline()` read and write a local JSON file
+that holds the last recorded stats for each named benchmark, so you can
+compare today's run against a committed baseline:
+
+```js
+const { benchmark, summarize, saveBaseline, compareToBaseline } = require('benchlet');
+
+const BASELINE_FILE = '.benchlet-baseline.json';
+
+const results = await benchmark(handleToolCall, cases);
+const [{ name, stats }] = summarize(results);
+
+const { baseline, delta } = compareToBaseline(BASELINE_FILE, name, stats);
+
+if (delta) {
+  console.log(name, `p95 changed by ${delta.p95.percent.toFixed(1)}%`);
+} else {
+  console.log(name, 'no baseline recorded yet');
+}
+
+// after reviewing the delta, record the current run as the new baseline
+saveBaseline(BASELINE_FILE, name, stats);
+```
+
+`compareToBaseline()` returns `{ name, current, baseline, delta }`. When
+no baseline has been recorded yet for that name, `baseline` and `delta`
+are `null`. Otherwise `delta` is keyed by metric (`min`, `max`, `mean`,
+`stddev`, `p50`, `p95`, `p99`), each with `{ current, baseline, absolute,
+percent }` — `diffStats()` exposes this same comparison directly on two
+stats objects, without touching the file system. The baseline file stores
+one JSON object keyed by benchmark name, so multiple named benchmarks can
+share a single file; writing a baseline only updates its own entry.
 
 ## Status
 
